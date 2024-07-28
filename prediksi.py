@@ -26,10 +26,12 @@ firebase_creds = {
     "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
 }
 
-cred = credentials.Certificate(firebase_creds)
-firebase_admin.initialize_app(cred, {
-    'databaseURL': 'https://himedislogin-default-rtdb.firebaseio.com/'
-})
+# Periksa apakah aplikasi Firebase sudah diinisialisasi
+if not firebase_admin._apps:
+    cred = credentials.Certificate(firebase_creds)
+    firebase_admin.initialize_app(cred, {
+        'databaseURL': 'https://himedislogin-default-rtdb.firebaseio.com/'
+    })
 
 # Mengakses Realtime Database
 ref = db.reference('/predictions')  # Sesuaikan dengan path yang sesuai di database
