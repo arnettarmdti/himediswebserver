@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import xgboost as xgb
 import numpy as np
+import streamlit as st
 import joblib
 import firebase_admin
 from firebase_admin import credentials, db
@@ -12,7 +13,17 @@ app = Flask(__name__)
 model = joblib.load('xgboost_model3.pkl')
 
 # Mengonfigurasi Firebase
-cred = credentials.Certificate('himedislogin-firebase-adminsdk-bbpnz-5236db0881.json')
+cred = credentials.Certificate(
+    {"type": st.secrets["firebase"]["type"],
+    "project_id": st.secrets["firebase"]["project_id"],
+    "private_key_id": st.secrets["firebase"]["private_key_id"],
+    "private_key": st.secrets["firebase"]["private_key"].replace('\\n', '\n'),
+    "client_email": st.secrets["firebase"]["client_email"],
+    "client_id": st.secrets["firebase"]["client_id"],
+    "auth_uri": st.secrets["firebase"]["auth_uri"],
+    "token_uri": st.secrets["firebase"]["token_uri"],
+    "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+    "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]})
 firebase_admin.initialize_app(cred, {
     'databaseURL': 'https://himedislogin-default-rtdb.firebaseio.com/'
 })
