@@ -13,8 +13,8 @@ app = Flask(__name__)
 model = joblib.load('xgboost_model3.pkl')
 
 # Mengonfigurasi Firebase
-cred = credentials.Certificate(
-    {"type": st.secrets["firebase"]["type"],
+firebase_creds = {
+    "type": st.secrets["firebase"]["type"],
     "project_id": st.secrets["firebase"]["project_id"],
     "private_key_id": st.secrets["firebase"]["private_key_id"],
     "private_key": st.secrets["firebase"]["private_key"].replace('\\n', '\n'),
@@ -23,7 +23,10 @@ cred = credentials.Certificate(
     "auth_uri": st.secrets["firebase"]["auth_uri"],
     "token_uri": st.secrets["firebase"]["token_uri"],
     "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
-    "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]})
+    "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
+}
+
+cred = credentials.Certificate(firebase_creds)
 firebase_admin.initialize_app(cred, {
     'databaseURL': 'https://himedislogin-default-rtdb.firebaseio.com/'
 })
