@@ -1,5 +1,4 @@
 import streamlit as st
-import xgboost as xgb
 import numpy as np
 import joblib
 import firebase_admin
@@ -29,7 +28,8 @@ if not firebase_admin._apps:
     })
 
 # Mengakses Realtime Database
-ref = db.reference('/predictions')
+ref = db.reference('/sensors')  # Path untuk data sensor dari Firebase
+pred_ref = db.reference('/predictions')  # Path untuk hasil prediksi ke Firebase
 
 # Fungsi prediksi
 def predict(sensor_value_ir, sensor_value_red):
@@ -40,15 +40,22 @@ def predict(sensor_value_ir, sensor_value_red):
 # Aplikasi Streamlit
 st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
 
+# Memantau perubahan pada nilai sensor dari Firebase
+def monitor_sensor_changes(event):
+    if event.data:
+        sensor_value_ir = event.data.get('sensor_value_ir')
+        sensor_value_red = event.data.get('sensor_value_red')
+        prediction = predict(sensor_value_ir, sensor_value_red)
+        result = {
+            'sensor_value_ir': sensor_value_ir,
+            'sensor_value_red': sensor_value_red,
+            'prediction': prediction
+        }
+        pred_ref.set(result)
+
+ref.listen(monitor_sensor_changes)
+
+# Tampilkan input nilai sensor (opsional, bisa dihilangkan jika inputnya hanya dari Firebase)
 sensor_value_ir = st.number_input("Masukkan nilai sensor IR:", min_value=0.0, step=0.1)
 sensor_value_red = st.number_input("Masukkan nilai sensor Red:", min_value=0.0, step=0.1)
 
-if st.button("Prediksi"):
-    prediction = predict(sensor_value_ir, sensor_value_red)
-    result = {
-        'sensor_value_ir': sensor_value_ir,
-        'sensor_value_red': sensor_value_red,
-        'prediction': prediction
-    }
-    ref.push(result)
-    st.write("Hasil Prediksi:", prediction)
