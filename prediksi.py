@@ -28,7 +28,7 @@ if not firebase_admin._apps:
     })
 
 # Mengakses Realtime Database
-ref = db.reference('/sensors')  # Path untuk data sensor dari Firebase
+ref = db.reference('/dataSensor')  # Path untuk data sensor dari Firebase
 pred_ref = db.reference('/predictions')  # Path untuk hasil prediksi ke Firebase
 
 # Fungsi prediksi
