@@ -51,7 +51,8 @@ def monitor_sensor_changes(event):
             'sensor_value_red': sensor_value_red,
             'prediction': prediction
         }
-        pred_ref.set(result)
+        # pred_ref.set(result)
+        pred_ref.push(result)
 
 ref.listen(monitor_sensor_changes)
 
