@@ -41,11 +41,13 @@ def predict(sensor_value_ir, sensor_value_red):
     return float(prediction)
 
 # Fungsi untuk memproses data baru dan memperbarui Firebase
-def process_data(data_id, sensor_value_ir, sensor_value_red):
+def process_data(data_id, sensor_value_ir, sensor_value_red, temperature, heart_rate):
     prediction = predict(sensor_value_ir, sensor_value_red)
     result = {
         'sensor_value_ir': sensor_value_ir,
         'sensor_value_red': sensor_value_red,
+        'temperature': temperature,
+        'heart_rate': heart_rate,
         'prediction': prediction
     }
     ref.child(data_id).update(result)  # Update data dengan hasil prediksi
@@ -58,6 +60,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         data = json.loads(post_data)
         sensor_value_ir = data.get('sensor_value_ir')
         sensor_value_red = data.get('sensor_value_red')
+        temperature = data.get('temperature')
+        heart_rate = data.get('heart_rate')
 
         if sensor_value_ir is None or sensor_value_red is None:
             self.send_response(400)
@@ -69,6 +73,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         result = {
             'sensor_value_ir': sensor_value_ir,
             'sensor_value_red': sensor_value_red,
+            'temperature': temperature,
+            'heart_rate': heart_rate,
             'prediction': prediction
         }
         ref.push(result)
@@ -87,8 +93,10 @@ def listen_for_data_changes():
             if isinstance(data, dict):
                 sensor_value_ir = data.get('sensor_value_ir')
                 sensor_value_red = data.get('sensor_value_red')
+                temperature = data.get('temperature')
+                heart_rate = data.get('heart_rate')
                 if sensor_value_ir is not None and sensor_value_red is not None:
-                    process_data(data_id, sensor_value_ir, sensor_value_red)
+                    process_data(data_id, sensor_value_ir, sensor_value_red, temperature, heart_rate)
     
     ref.listen(listener)
 
@@ -111,12 +119,16 @@ st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
 
 sensor_value_ir = st.number_input("Masukkan nilai sensor IR:", min_value=0.0, step=0.1)
 sensor_value_red = st.number_input("Masukkan nilai sensor Red:", min_value=0.0, step=0.1)
+temperature = st.number_input("Masukkan suhu:", min_value=-50.0, max_value=100.0, step=0.1)
+heart_rate = st.number_input("Masukkan detak jantung:", min_value=30, max_value=200, step=1)
 
 if st.button("Prediksi"):
     prediction = predict(sensor_value_ir, sensor_value_red)
     result = {
         'sensor_value_ir': sensor_value_ir,
         'sensor_value_red': sensor_value_red,
+        'temperature': temperature,
+        'heart_rate': heart_rate,
         'prediction': prediction
     }
     ref.push(result)
