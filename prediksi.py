@@ -58,7 +58,6 @@ def monitor_sensor_changes(event):
             'sensor_heartrate': sensor_heartrate,
             'prediction': prediction
         }
-        pred_ref.set(result)
         pred_ref.push(result)
 
 ref.listen(monitor_sensor_changes)
@@ -66,4 +65,3 @@ ref.listen(monitor_sensor_changes)
 # Input nilai sensor (opsional)
 sensor_value_ir = st.number_input("Masukkan nilai sensor IR:", min_value=0.0, step=0.1)
 sensor_value_red = st.number_input("Masukkan nilai sensor Red:", min_value=0.0, step=0.1)
-
