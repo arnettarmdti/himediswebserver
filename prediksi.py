@@ -57,7 +57,7 @@ def monitor_sensor_changes(event):
         }
         pred_ref.set(result)
         #nanti data prediksi, sensor ir , red suhu dan bpm akan di post ke path baru
-        # pred_ref.push(result)
+        pred_ref.push(result)
 
 ref.listen(monitor_sensor_changes)
 
