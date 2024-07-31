@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import joblib
+import xgboost
 import firebase_admin
 from firebase_admin import credentials, db
 
@@ -29,7 +30,7 @@ if not firebase_admin._apps:
 
 # Mengakses Realtime Database
 ref = db.reference('/dataSensor')  # Path untuk data sensor dari Firebase
-pred_ref = db.reference('/predictions/hasil')  # Path untuk hasil prediksi ke Firebase
+pred_ref = db.reference('/predictions')  # Path untuk hasil prediksi ke Firebase
 
 # Fungsi prediksi
 def predict(sensor_value_ir, sensor_value_red):
@@ -45,6 +46,9 @@ def monitor_sensor_changes(event):
     if event.data:
         sensor_value_ir = event.data.get('sensor_value_ir')
         sensor_value_red = event.data.get('sensor_value_red')
+        # sensor_temperature = event.data.get('suhu')
+        # sensor_heartrate = event.data.get('bpm')
+        #tambahkan data sensor suhu dan pulse
         prediction = predict(sensor_value_ir, sensor_value_red)
         result = {
             'sensor_value_ir': sensor_value_ir,
@@ -52,6 +56,7 @@ def monitor_sensor_changes(event):
             'prediction': prediction
         }
         # pred_ref.set(result)
+        #nanti data prediksi, sensor ir , red suhu dan bpm akan di post ke path baru
         pred_ref.push(result)
 
 ref.listen(monitor_sensor_changes)
