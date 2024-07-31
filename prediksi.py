@@ -1,8 +1,12 @@
 import streamlit as st
+import xgboost as xgb
 import numpy as np
 import joblib
 import firebase_admin
 from firebase_admin import credentials, db
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+import json
 
 # Memuat model XGBoost yang sudah dilatih
 model = joblib.load('xgboost_model3.pkl')
@@ -28,8 +32,7 @@ if not firebase_admin._apps:
     })
 
 # Mengakses Realtime Database
-data_sensor_ref = db.reference('/dataSensor')  # Path untuk data sensor dari Firebase
-pred_ref = db.reference('/predictions')  # Path untuk hasil prediksi ke Firebase
+ref = db.reference('/dataSensor')
 
 # Fungsi prediksi
 def predict(sensor_value_ir, sensor_value_red):
@@ -37,38 +40,47 @@ def predict(sensor_value_ir, sensor_value_red):
     prediction = model.predict(features)[0]
     return float(prediction)
 
+# Kelas untuk menangani HTTP POST requests
+class RequestHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        data = json.loads(post_data)
+        sensor_value_ir = data.get('sensor_value_ir')
+        sensor_value_red = data.get('sensor_value_red')
+
+        if sensor_value_ir is None or sensor_value_red is None:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(b'Invalid input')
+            return
+
+        prediction = predict(sensor_value_ir, sensor_value_red)
+        result = {
+            'sensor_value_ir': sensor_value_ir,
+            'sensor_value_red': sensor_value_red,
+            'prediction': prediction
+        }
+        ref.push(result)
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        response = json.dumps({'prediction': prediction})
+        self.wfile.write(response.encode())
+
+# Menjalankan HTTP Server di thread terpisah
+def run_server():
+    server_address = ('', 8000)
+    httpd = HTTPServer(server_address, RequestHandler)
+    httpd.serve_forever()
+
+thread = threading.Thread(target=run_server)
+thread.daemon = True
+thread.start()
+
 # Aplikasi Streamlit
 st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
 
-# Memantau perubahan pada nilai sensor dari Firebase
-def monitor_sensor_changes(event):
-    if event.data:
-        st.write("Data diterima dari Firebase:", event.data)  # Debug: tampilkan data yang diterima
-        for key, data in event.data.items():
-            sensor_value_ir = data.get('sensor_value_ir')
-            sensor_value_red = data.get('sensor_value_red')
-            
-            if sensor_value_ir is None or sensor_value_red is None:
-                st.write("Data sensor tidak lengkap:", data)  # Debug: tampilkan data jika tidak lengkap
-                continue
-            
-            # Lakukan prediksi
-            prediction = predict(sensor_value_ir, sensor_value_red)
-            st.write("Hasil Prediksi:", prediction)  # Debug: tampilkan hasil prediksi
-            
-            result = {
-                'sensor_value_ir': sensor_value_ir,
-                'sensor_value_red': sensor_value_red,
-                'prediction': prediction
-            }
-            
-            # Kirim hasil prediksi ke path baru atau update path yang sama
-            pred_ref.child(key).update(result)
-            st.write("Hasil prediksi diperbarui di Firebase:", result)  # Debug: konfirmasi hasil pengiriman
-
-data_sensor_ref.listen(monitor_sensor_changes)
-
-# Tampilkan input nilai sensor (opsional, bisa dihilangkan jika inputnya hanya dari Firebase)
 sensor_value_ir = st.number_input("Masukkan nilai sensor IR:", min_value=0.0, step=0.1)
 sensor_value_red = st.number_input("Masukkan nilai sensor Red:", min_value=0.0, step=0.1)
 
@@ -79,7 +91,5 @@ if st.button("Prediksi"):
         'sensor_value_red': sensor_value_red,
         'prediction': prediction
     }
-    # Tambahkan hasil prediksi ke path baru
-    pred_ref.push(result)
+    ref.push(result)
     st.write("Hasil Prediksi:", prediction)
-    st.write("Hasil prediksi dikirim ke Firebase:", result)  # Debug: konfirmasi hasil pengiriman
