@@ -35,19 +35,19 @@ if not firebase_admin._apps:
 ref = db.reference('/dataSensor')
 
 # Fungsi prediksi
-def predict(sensor_value_ir, sensor_value_red):
-    features = np.array([sensor_value_ir, sensor_value_red]).reshape(1, -1)
+def predict(ir_value, red_value):
+    features = np.array([ir_value, red_value]).reshape(1, -1)
     prediction = model.predict(features)[0]
     return float(prediction)
 
 # Fungsi untuk memproses data baru dan memperbarui Firebase
-def process_data(data_id, sensor_value_ir, sensor_value_red, temperature, heart_rate):
-    prediction = predict(sensor_value_ir, sensor_value_red)
+def process_data(data_id, ir_value, red_value, temp, bpm):
+    prediction = predict(ir_value, red_value)
     result = {
-        'sensor_value_ir': sensor_value_ir,
-        'sensor_value_red': sensor_value_red,
-        'temperature': temperature,
-        'heart_rate': heart_rate,
+        'irValue': ir_value,
+        'redValue': red_value,
+        'suhu': temp,
+        'bpm': bpm,
         'prediction': prediction
     }
     ref.child(data_id).update(result)  # Update data dengan hasil prediksi
@@ -58,23 +58,23 @@ class RequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
         data = json.loads(post_data)
-        sensor_value_ir = data.get('sensor_value_ir')
-        sensor_value_red = data.get('sensor_value_red')
-        temperature = data.get('temperature')
-        heart_rate = data.get('heart_rate')
+        ir_value = data.get('irValue')
+        red_value = data.get('redValue')
+        temp = data.get('suhu')
+        bpm = data.get('bpm')
 
-        if sensor_value_ir is None or sensor_value_red is None:
+        if ir_value is None or red_value is None:
             self.send_response(400)
             self.end_headers()
             self.wfile.write(b'Invalid input')
             return
 
-        prediction = predict(sensor_value_ir, sensor_value_red)
+        prediction = predict(ir_value, red_value)
         result = {
-            'sensor_value_ir': sensor_value_ir,
-            'sensor_value_red': sensor_value_red,
-            'temperature': temperature,
-            'heart_rate': heart_rate,
+            'irValue': ir_value,
+            'redValue': red_value,
+            'suhu': temp,
+            'bpm': bpm,
             'prediction': prediction
         }
         ref.push(result)
@@ -91,12 +91,12 @@ def listen_for_data_changes():
             data_id = event.path.split('/')[-1]
             data = event.data
             if isinstance(data, dict):
-                sensor_value_ir = data.get('sensor_value_ir')
-                sensor_value_red = data.get('sensor_value_red')
-                temperature = data.get('temperature')
-                heart_rate = data.get('heart_rate')
-                if sensor_value_ir is not None and sensor_value_red is not None:
-                    process_data(data_id, sensor_value_ir, sensor_value_red, temperature, heart_rate)
+                ir_value = data.get('irValue')
+                red_value = data.get('redValue')
+                temp = data.get('suhu')
+                bpm = data.get('bpm')
+                if ir_value is not None and red_value is not None:
+                    process_data(data_id, ir_value, red_value, temp, bpm)
     
     ref.listen(listener)
 
@@ -117,18 +117,18 @@ listen_for_data_changes()
 # Aplikasi Streamlit
 st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
 
-sensor_value_ir = st.number_input("Masukkan nilai sensor IR:", min_value=0.0, step=0.1)
-sensor_value_red = st.number_input("Masukkan nilai sensor Red:", min_value=0.0, step=0.1)
-temperature = st.number_input("Masukkan suhu:", min_value=-50.0, max_value=100.0, step=0.1)
-heart_rate = st.number_input("Masukkan detak jantung:", min_value=30, max_value=200, step=1)
+ir_value = st.number_input("Masukkan nilai sensor IR:", min_value=0.0, step=0.1)
+red_value = st.number_input("Masukkan nilai sensor Red:", min_value=0.0, step=0.1)
+temp = st.number_input("Masukkan suhu:", min_value=-50.0, max_value=100.0, step=0.1)
+bpm = st.number_input("Masukkan detak jantung:", min_value=30, max_value=200, step=1)
 
 if st.button("Prediksi"):
-    prediction = predict(sensor_value_ir, sensor_value_red)
+    prediction = predict(ir_value, red_value)
     result = {
-        'sensor_value_ir': sensor_value_ir,
-        'sensor_value_red': sensor_value_red,
-        'temperature': temperature,
-        'heart_rate': heart_rate,
+        'irValue': ir_value,
+        'redValue': red_value,
+        'suhu': temp,
+        'bpm': bpm,
         'prediction': prediction
     }
     ref.push(result)
