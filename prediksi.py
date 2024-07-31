@@ -44,19 +44,21 @@ st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
 # Memantau perubahan pada nilai sensor dari Firebase
 def monitor_sensor_changes(event):
     if event.data:
-        sensor_value_ir = event.data.get('sensor_value_ir')
-        sensor_value_red = event.data.get('sensor_value_red')
-        #sensor_temperature = event.data.get('suhu')
-        #sensor_heartrate = event.data.get('bpm')
-        #tambahkan data sensor suhu dan pulse
+        sensor_value_ir = event.data.get('irValue')
+        sensor_value_red = event.data.get('redValue')
+        sensor_temperature = event.data.get('suhu')
+        sensor_heartrate = event.data.get('bpm')
+
+        # Jika ingin menyertakan sensor suhu dan bpm dalam prediksi atau data
         prediction = predict(sensor_value_ir, sensor_value_red)
         result = {
             'sensor_value_ir': sensor_value_ir,
             'sensor_value_red': sensor_value_red,
+            'sensor_temperature': sensor_temperature,
+            'sensor_heartrate': sensor_heartrate,
             'prediction': prediction
         }
         pred_ref.set(result)
-        #nanti data prediksi, sensor ir , red suhu dan bpm akan di post ke path baru
         pred_ref.push(result)
 
 ref.listen(monitor_sensor_changes)
@@ -65,18 +67,3 @@ ref.listen(monitor_sensor_changes)
 sensor_value_ir = st.number_input("Masukkan nilai sensor IR:", min_value=0.0, step=0.1)
 sensor_value_red = st.number_input("Masukkan nilai sensor Red:", min_value=0.0, step=0.1)
 
-# Tombol untuk memeriksa hasil
-if st.button("Cek Hasil"):
-    # Menghasilkan prediksi berdasarkan input
-    prediction = predict(sensor_value_ir, sensor_value_red)
-    st.write("Nilai Sensor IR:", sensor_value_ir)
-    st.write("Nilai Sensor Red:", sensor_value_red)
-    st.write("Hasil Prediksi:", prediction)
-    
-    # Menyimpan hasil prediksi ke Firebase
-    result = {
-        'sensor_value_ir': sensor_value_ir,
-        'sensor_value_red': sensor_value_red,
-        'prediction': prediction
-    }
-    pred_ref.push(result)
