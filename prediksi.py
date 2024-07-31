@@ -63,7 +63,7 @@ def monitor_sensor_changes(event):
             }
             
             # Kirim hasil prediksi ke path baru atau update path yang sama
-            data_sensor_ref.child(key).update(result)
+            pred_ref.child(key).update(result)
             st.write("Hasil prediksi diperbarui di Firebase:", result)  # Debug: konfirmasi hasil pengiriman
 
 data_sensor_ref.listen(monitor_sensor_changes)
