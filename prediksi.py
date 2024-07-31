@@ -32,7 +32,8 @@ if not firebase_admin._apps:
     })
 
 # Mengakses Realtime Database
-ref = db.reference('/predictions')
+data_sensor_ref = db.reference('/dataSensor')
+predictions_ref = db.reference('/predictions')
 
 # Fungsi prediksi
 def predict(sensor_value_ir, sensor_value_red):
@@ -42,31 +43,46 @@ def predict(sensor_value_ir, sensor_value_red):
 
 # Kelas untuk menangani HTTP POST requests
 class RequestHandler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        post_data = self.rfile.read(content_length)
-        data = json.loads(post_data)
-        sensor_value_ir = data.get('sensor_value_ir')
-        sensor_value_red = data.get('sensor_value_red')
+    def do_GET(self):
+        if self.path == '/process_data':
+            # Ambil data dari Firebase
+            data_snapshot = data_sensor_ref.get()
+            if data_snapshot:
+                for key, data in data_snapshot.items():
+                    sensor_value_ir = data.get('sensor_value_ir')
+                    sensor_value_red = data.get('sensor_value_red')
 
-        if sensor_value_ir is None or sensor_value_red is None:
-            self.send_response(400)
+                    if sensor_value_ir is None or sensor_value_red is None:
+                        continue
+
+                    # Prediksi
+                    prediction = predict(sensor_value_ir, sensor_value_red)
+                    result = {
+                        'sensor_value_ir': sensor_value_ir,
+                        'sensor_value_red': sensor_value_red,
+                        'prediction': prediction
+                    }
+
+                    # Kirim hasil prediksi ke Firebase
+                    predictions_ref.push(result)
+                    
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                response = json.dumps({'status': 'Data processed and predictions sent'})
+                self.wfile.write(response.encode())
+            else:
+                self.send_response(404)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                response = json.dumps({'status': 'No data found'})
+                self.wfile.write(response.encode())
+        else:
+            self.send_response(404)
+            self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(b'Invalid input')
-            return
-
-        prediction = predict(sensor_value_ir, sensor_value_red)
-        result = {
-            'sensor_value_ir': sensor_value_ir,
-            'sensor_value_red': sensor_value_red,
-            'prediction': prediction
-        }
-        ref.push(result)
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        response = json.dumps({'prediction': prediction})
-        self.wfile.write(response.encode())
+            response = json.dumps({'status': 'Not Found'})
+            self.wfile.write(response.encode())
 
 # Menjalankan HTTP Server di thread terpisah
 def run_server():
@@ -81,15 +97,8 @@ thread.start()
 # Aplikasi Streamlit
 st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
 
-sensor_value_ir = st.number_input("Masukkan nilai sensor IR:", min_value=0.0, step=0.1)
-sensor_value_red = st.number_input("Masukkan nilai sensor Red:", min_value=0.0, step=0.1)
+# Menampilkan status
+st.write("Server HTTP sedang berjalan dan memproses data sensor dari Firebase.")
 
-if st.button("Prediksi"):
-    prediction = predict(sensor_value_ir, sensor_value_red)
-    result = {
-        'sensor_value_ir': sensor_value_ir,
-        'sensor_value_red': sensor_value_red,
-        'prediction': prediction
-    }
-    ref.push(result)
-    st.write("Hasil Prediksi:", prediction)
+# Notifikasi
+st.write("HTTP GET request ke `/process_data` untuk memproses data sensor dan mengirim hasil prediksi.")
