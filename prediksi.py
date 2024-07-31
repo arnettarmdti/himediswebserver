@@ -28,7 +28,7 @@ firebase_creds = {
 if not firebase_admin._apps:
     cred = credentials.Certificate(firebase_creds)
     firebase_admin.initialize_app(cred, {
-        'databaseURL': 'https://himedis-default-rtdb.firebaseio.com/'
+        'databaseURL': 'https://himedislogin-default-rtdb.firebaseio.com/'
     })
 
 # Mengakses Realtime Database
