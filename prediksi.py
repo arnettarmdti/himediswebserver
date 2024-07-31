@@ -46,8 +46,8 @@ def monitor_sensor_changes(event):
     if event.data:
         sensor_value_ir = event.data.get('sensor_value_ir')
         sensor_value_red = event.data.get('sensor_value_red')
-        # sensor_temperature = event.data.get('suhu')
-        # sensor_heartrate = event.data.get('bpm')
+        #sensor_temperature = event.data.get('suhu')
+        #sensor_heartrate = event.data.get('bpm')
         #tambahkan data sensor suhu dan pulse
         prediction = predict(sensor_value_ir, sensor_value_red)
         result = {
