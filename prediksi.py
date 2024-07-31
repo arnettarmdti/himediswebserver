@@ -1,9 +1,12 @@
 import streamlit as st
+import xgboost as xgb
 import numpy as np
 import joblib
-import xgboost
 import firebase_admin
 from firebase_admin import credentials, db
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+import json
 
 # Memuat model XGBoost yang sudah dilatih
 model = joblib.load('xgboost_model3.pkl')
@@ -29,7 +32,7 @@ if not firebase_admin._apps:
     })
 
 # Mengakses Realtime Database
-ref = db.reference('/dataSensor')  # Path untuk data sensor dari Firebase
+ref = db.reference('/predictions')
 
 # Fungsi prediksi
 def predict(sensor_value_ir, sensor_value_red):
@@ -37,37 +40,56 @@ def predict(sensor_value_ir, sensor_value_red):
     prediction = model.predict(features)[0]
     return float(prediction)
 
-# Aplikasi Streamlit
-st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
+# Kelas untuk menangani HTTP POST requests
+class RequestHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        data = json.loads(post_data)
+        sensor_value_ir = data.get('sensor_value_ir')
+        sensor_value_red = data.get('sensor_value_red')
 
-# Memantau perubahan pada nilai sensor dari Firebase
-def monitor_sensor_changes(event):
-    if event.data:
-        sensor_value_ir = event.data.get('irValue')
-        sensor_value_red = event.data.get('redValue')
-        sensor_temperature = event.data.get('suhu')
-        sensor_heartrate = event.data.get('bpm')
+        if sensor_value_ir is None or sensor_value_red is None:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(b'Invalid input')
+            return
 
-        # Jika ingin menyertakan sensor suhu dan bpm dalam prediksi atau data
         prediction = predict(sensor_value_ir, sensor_value_red)
         result = {
             'sensor_value_ir': sensor_value_ir,
             'sensor_value_red': sensor_value_red,
-            'sensor_temperature': sensor_temperature,
-            'sensor_heartrate': sensor_heartrate,
             'prediction': prediction
         }
-        # Menyimpan hasil prediksi di path /dataSensor
-        ref.update({
-            'prediction': prediction,
-            'sensor_value_ir': sensor_value_ir,
-            'sensor_value_red': sensor_value_red,
-            'sensor_temperature': sensor_temperature,
-            'sensor_heartrate': sensor_heartrate
-        })
+        ref.push(result)
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        response = json.dumps({'prediction': prediction})
+        self.wfile.write(response.encode())
 
-ref.listen(monitor_sensor_changes)
+# Menjalankan HTTP Server di thread terpisah
+def run_server():
+    server_address = ('', 8000)
+    httpd = HTTPServer(server_address, RequestHandler)
+    httpd.serve_forever()
 
-# Input nilai sensor (opsional)
+thread = threading.Thread(target=run_server)
+thread.daemon = True
+thread.start()
+
+# Aplikasi Streamlit
+st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
+
 sensor_value_ir = st.number_input("Masukkan nilai sensor IR:", min_value=0.0, step=0.1)
 sensor_value_red = st.number_input("Masukkan nilai sensor Red:", min_value=0.0, step=0.1)
+
+if st.button("Prediksi"):
+    prediction = predict(sensor_value_ir, sensor_value_red)
+    result = {
+        'sensor_value_ir': sensor_value_ir,
+        'sensor_value_red': sensor_value_red,
+        'prediction': prediction
+    }
+    ref.push(result)
+    st.write("Hasil Prediksi:", prediction)
