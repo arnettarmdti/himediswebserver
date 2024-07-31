@@ -30,7 +30,6 @@ if not firebase_admin._apps:
 
 # Mengakses Realtime Database
 ref = db.reference('/dataSensor')  # Path untuk data sensor dari Firebase
-pred_ref = db.reference('/predictions')  # Path untuk hasil prediksi ke Firebase
 
 # Fungsi prediksi
 def predict(sensor_value_ir, sensor_value_red):
@@ -58,7 +57,8 @@ def monitor_sensor_changes(event):
             'sensor_heartrate': sensor_heartrate,
             'prediction': prediction
         }
-        pred_ref.push(result)
+        # Mengupdate path yang sama atau path lain jika diinginkan
+        ref.push(result)
 
 ref.listen(monitor_sensor_changes)
 
