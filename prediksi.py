@@ -33,12 +33,32 @@ if not firebase_admin._apps:
 
 # Mengakses Realtime Database
 ref = db.reference('/predictions')
+data_sensor_ref = db.reference('/dataSensor')  # Referensi path dataSensor
 
 # Fungsi prediksi
 def predict(sensor_value_ir, sensor_value_red):
     features = np.array([sensor_value_ir, sensor_value_red]).reshape(1, -1)
     prediction = model.predict(features)[0]
     return float(prediction)
+
+# Fungsi untuk mengambil data dari Firebase dan melakukan prediksi
+def fetch_and_predict():
+    data = data_sensor_ref.get()  # Mengambil data dari path /dataSensor
+    if data:
+        results = []
+        for entry in data:
+            sensor_value_ir = entry.get('sensor_value_ir')
+            sensor_value_red = entry.get('sensor_value_red')
+            if sensor_value_ir is not None and sensor_value_red is not None:
+                prediction = predict(sensor_value_ir, sensor_value_red)
+                results.append({
+                    'sensor_value_ir': sensor_value_ir,
+                    'sensor_value_red': sensor_value_red,
+                    'prediction': prediction
+                })
+        return results
+    else:
+        return None
 
 # Kelas untuk menangani HTTP POST requests
 class RequestHandler(BaseHTTPRequestHandler):
@@ -93,3 +113,12 @@ if st.button("Prediksi"):
     }
     ref.push(result)
     st.write("Hasil Prediksi:", prediction)
+
+if st.button("Ambil Data dan Prediksi"):
+    results = fetch_and_predict()
+    if results:
+        st.write("Hasil Prediksi dari Data Sensor:")
+        for result in results:
+            st.write(result)
+    else:
+        st.write("Tidak ada data untuk diprediksi.")
