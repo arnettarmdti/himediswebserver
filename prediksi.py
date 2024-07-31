@@ -40,6 +40,16 @@ def predict(sensor_value_ir, sensor_value_red):
     prediction = model.predict(features)[0]
     return float(prediction)
 
+# Fungsi untuk memproses data baru dan memperbarui Firebase
+def process_data(data_id, sensor_value_ir, sensor_value_red):
+    prediction = predict(sensor_value_ir, sensor_value_red)
+    result = {
+        'sensor_value_ir': sensor_value_ir,
+        'sensor_value_red': sensor_value_red,
+        'prediction': prediction
+    }
+    ref.child(data_id).update(result)  # Update data dengan hasil prediksi
+
 # Kelas untuk menangani HTTP POST requests
 class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -68,15 +78,33 @@ class RequestHandler(BaseHTTPRequestHandler):
         response = json.dumps({'prediction': prediction})
         self.wfile.write(response.encode())
 
+# Fungsi untuk menangani perubahan data pada Firebase
+def listen_for_data_changes():
+    def listener(event):
+        if event.event_type == 'put':
+            data_id = event.path.split('/')[-1]
+            data = event.data
+            if isinstance(data, dict):
+                sensor_value_ir = data.get('sensor_value_ir')
+                sensor_value_red = data.get('sensor_value_red')
+                if sensor_value_ir is not None and sensor_value_red is not None:
+                    process_data(data_id, sensor_value_ir, sensor_value_red)
+    
+    ref.listen(listener)
+
 # Menjalankan HTTP Server di thread terpisah
 def run_server():
     server_address = ('', 8000)
     httpd = HTTPServer(server_address, RequestHandler)
     httpd.serve_forever()
 
+# Mulai thread untuk server HTTP
 thread = threading.Thread(target=run_server)
 thread.daemon = True
 thread.start()
+
+# Mulai listener Firebase
+listen_for_data_changes()
 
 # Aplikasi Streamlit
 st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
