@@ -61,7 +61,22 @@ def monitor_sensor_changes(event):
 
 ref.listen(monitor_sensor_changes)
 
-# Tampilkan input nilai sensor (opsional, bisa dihilangkan jika inputnya hanya dari Firebase)
+# Input nilai sensor (opsional)
 sensor_value_ir = st.number_input("Masukkan nilai sensor IR:", min_value=0.0, step=0.1)
 sensor_value_red = st.number_input("Masukkan nilai sensor Red:", min_value=0.0, step=0.1)
 
+# Tombol untuk memeriksa hasil
+if st.button("Cek Hasil"):
+    # Menghasilkan prediksi berdasarkan input
+    prediction = predict(sensor_value_ir, sensor_value_red)
+    st.write("Nilai Sensor IR:", sensor_value_ir)
+    st.write("Nilai Sensor Red:", sensor_value_red)
+    st.write("Hasil Prediksi:", prediction)
+    
+    # Menyimpan hasil prediksi ke Firebase
+    result = {
+        'sensor_value_ir': sensor_value_ir,
+        'sensor_value_red': sensor_value_red,
+        'prediction': prediction
+    }
+    pred_ref.push(result)
