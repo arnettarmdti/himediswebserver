@@ -6,7 +6,7 @@ import firebase_admin
 from firebase_admin import credentials, db
 
 # Memuat model XGBoost yang sudah dilatih
-model = joblib.load('xgboost_model3.pkl')
+model = joblib.load('xgboost_model_new.pkl')
 
 # Mengonfigurasi Firebase
 firebase_creds = {
