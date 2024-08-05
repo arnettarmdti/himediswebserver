@@ -7,10 +7,6 @@ from firebase_admin import credentials, db
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 import json
-import logging
-
-# Konfigurasi logging
-logging.basicConfig(level=logging.INFO)
 
 # Memuat model XGBoost yang sudah dilatih
 model = joblib.load('xgboost_model3.pkl')
@@ -45,7 +41,7 @@ def predict(ir_value, red_value):
     return float(prediction)
 
 # Fungsi untuk memproses data baru dan memperbarui Firebase
-def process_data(data_id, ir_value, red_value, temp, bpm):
+def process_data(ir_value, red_value, temp, bpm):
     prediction = predict(ir_value, red_value)
     result = {
         'irValue': ir_value,
@@ -55,8 +51,7 @@ def process_data(data_id, ir_value, red_value, temp, bpm):
         'prediction': prediction
     }
     # Menggunakan 'set' untuk memperbarui data pada path yang sudah ada
-    ref.child(data_id).set(result)
-    logging.info(f"Data updated: {result}")
+    ref.set(result)
 
 # Kelas untuk menangani HTTP POST requests
 class RequestHandler(BaseHTTPRequestHandler):
@@ -64,20 +59,18 @@ class RequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
         data = json.loads(post_data)
-        data_id = data.get('id')  # Pastikan data mengandung ID unik
         ir_value = data.get('irValue')
         red_value = data.get('redValue')
         temp = data.get('suhu')
         bpm = data.get('bpm')
 
-        if data_id is None or ir_value is None or red_value is None:
+        if ir_value is None or red_value is None:
             self.send_response(400)
             self.end_headers()
             self.wfile.write(b'Invalid input')
             return
 
-        # Proses data jika ID unik diberikan
-        process_data(data_id, ir_value, red_value, temp, bpm)
+        process_data(ir_value, red_value, temp, bpm)
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
@@ -88,16 +81,14 @@ class RequestHandler(BaseHTTPRequestHandler):
 def listen_for_data_changes():
     def listener(event):
         if event.event_type == 'put':
-            data_id = event.path.split('/')[-1]
             data = event.data
             if isinstance(data, dict):
-                logging.info(f"Data received: {data}")
                 ir_value = data.get('irValue')
                 red_value = data.get('redValue')
                 temp = data.get('suhu')
                 bpm = data.get('bpm')
                 if ir_value is not None and red_value is not None:
-                    process_data(data_id, ir_value, red_value, temp, bpm)
+                    process_data(ir_value, red_value, temp, bpm)
     
     ref.listen(listener)
 
@@ -112,9 +103,8 @@ thread = threading.Thread(target=run_server)
 thread.daemon = True
 thread.start()
 
-# Mulai listener Firebase hanya jika diperlukan
-if st.session_state.get("start_listener", True):
-    listen_for_data_changes()
+# Mulai listener Firebase
+listen_for_data_changes()
 
 # Aplikasi Streamlit
 st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
@@ -133,6 +123,5 @@ if st.button("Prediksi"):
         'bpm': bpm,
         'prediction': prediction
     }
-    # Menggunakan 'set' untuk memperbarui data pada path yang sudah ada
-    ref.child('unique_id').set(result)  # Pastikan path sesuai dengan ID unik
+    ref.set(result)  # Menggunakan 'set' untuk memperbarui data pada path yang sudah ada
     st.write("Hasil Prediksi:", prediction)
