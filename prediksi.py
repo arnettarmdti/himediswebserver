@@ -1,5 +1,4 @@
 import streamlit as st
-import xgboost as xgb
 import numpy as np
 import joblib
 import firebase_admin
@@ -54,8 +53,8 @@ def process_data(data_id, ir_value, red_value, temp, bpm):
         'bpm': bpm,
         'prediction': prediction
     }
-    # Menggunakan 'set' untuk memperbarui data pada path yang sudah ada
-    ref.child(data_id).set(result)
+    # Menggunakan 'update' untuk memperbarui data pada path yang sudah ada
+    ref.child(data_id).update(result)
     logging.info(f"Data updated: {result}")
 
 # Kelas untuk menangani HTTP POST requests
@@ -76,12 +75,12 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(b'Invalid input')
             return
 
-        # Proses data jika ID unik diberikan
+        # Proses data dan perbarui Firebase
         process_data(data_id, ir_value, red_value, temp, bpm)
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
-        response = json.dumps({'prediction': prediction})
+        response = json.dumps({'prediction': predict(ir_value, red_value)})
         self.wfile.write(response.encode())
 
 # Fungsi untuk menangani perubahan data pada Firebase
@@ -97,6 +96,7 @@ def listen_for_data_changes():
                 temp = data.get('suhu')
                 bpm = data.get('bpm')
                 if ir_value is not None and red_value is not None:
+                    # Proses data hanya jika ada perubahan yang relevan
                     process_data(data_id, ir_value, red_value, temp, bpm)
     
     ref.listen(listener)
@@ -112,9 +112,8 @@ thread = threading.Thread(target=run_server)
 thread.daemon = True
 thread.start()
 
-# Mulai listener Firebase hanya jika diperlukan
-if st.session_state.get("start_listener", True):
-    listen_for_data_changes()
+# Mulai listener Firebase
+listen_for_data_changes()
 
 # Aplikasi Streamlit
 st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
@@ -133,6 +132,6 @@ if st.button("Prediksi"):
         'bpm': bpm,
         'prediction': prediction
     }
-    # Menggunakan 'set' untuk memperbarui data pada path yang sudah ada
-    ref.child('unique_id').set(result)  # Pastikan path sesuai dengan ID unik
+    # Pastikan data ID unik digunakan di sini
+    ref.child('unique_id').update(result)  # Ganti 'unique_id' dengan ID yang sesuai jika perlu
     st.write("Hasil Prediksi:", prediction)
