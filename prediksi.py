@@ -29,6 +29,7 @@ if not firebase_admin._apps:
 
 # Mengakses Realtime Database
 ref_sensor = db.reference('/dataSensor')
+ref_prediction = db.reference('/dataSensor2')  # Path baru untuk hasil prediksi
 
 # Fungsi prediksi
 def predict(ir_value, red_value):
@@ -59,9 +60,13 @@ def process_and_update_data():
                             'bpm': bpm,
                             'prediction': prediction
                         }
-                        ref_sensor.child(data_id).update(result)
-                        print(f"Updated {data_id} with prediction")
+                        # Menyimpan hasil prediksi ke path baru '/dataSensor2'
+                        ref_prediction.child(data_id).set(result)  # Gunakan set() untuk path baru
+                        print(f"Updated {data_id} in /dataSensor2 with prediction")
                 else:
                     print(f"Unexpected data format for {data_id}: {data}")
     except Exception as e:
         print("Error occurred:", str(e))
+
+# Jalankan fungsi untuk memproses data dan memperbarui Firebase
+process_and_update_data()
