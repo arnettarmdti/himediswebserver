@@ -32,7 +32,8 @@ if not firebase_admin._apps:
     })
 
 # Mengakses Realtime Database
-ref = db.reference('/dataSensor2')
+ref_sensor = db.reference('/dataSensor')
+ref_prediction = db.reference('/dataSensor2')
 
 # Fungsi prediksi
 def predict(ir_value, red_value):
@@ -40,8 +41,8 @@ def predict(ir_value, red_value):
     prediction = model.predict(features)[0]
     return float(prediction)
 
-# Fungsi untuk memproses data baru dan memperbarui Firebase
-def process_data(data_id, ir_value, red_value, temp, bpm):
+# Fungsi untuk memproses data dan memperbarui Firebase
+def process_and_update_data(data_id, ir_value, red_value, temp, bpm):
     prediction = predict(ir_value, red_value)
     result = {
         'irValue': ir_value,
@@ -50,7 +51,7 @@ def process_data(data_id, ir_value, red_value, temp, bpm):
         'bpm': bpm,
         'prediction': prediction
     }
-    ref.child(data_id).update(result)  # Update data dengan hasil prediksi
+    ref_prediction.child(data_id).put(result)  # Update data dengan hasil prediksi di path '/dataSensor2'
 
 # Kelas untuk menangani HTTP POST requests
 class RequestHandler(BaseHTTPRequestHandler):
@@ -77,7 +78,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             'bpm': bpm,
             'prediction': prediction
         }
-        ref.push(result)
+        ref_sensor.push(result)  # Simpan data sensor di path '/dataSensor'
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
@@ -96,9 +97,9 @@ def listen_for_data_changes():
                 temp = data.get('suhu')
                 bpm = data.get('bpm')
                 if ir_value is not None and red_value is not None:
-                    process_data(data_id, ir_value, red_value, temp, bpm)
+                    process_and_update_data(data_id, ir_value, red_value, temp, bpm)
     
-    ref.listen(listener)
+    ref_sensor.listen(listener)
 
 # Menjalankan HTTP Server di thread terpisah
 def run_server():
@@ -111,8 +112,10 @@ thread = threading.Thread(target=run_server)
 thread.daemon = True
 thread.start()
 
-# Mulai listener Firebase
-listen_for_data_changes()
+# Mulai listener Firebase hanya jika diperlukan
+if not st.session_state.get("listener_started", False):
+    listen_for_data_changes()
+    st.session_state["listener_started"] = True
 
 # Aplikasi Streamlit
 st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
@@ -131,5 +134,5 @@ if st.button("Prediksi"):
         'bpm': bpm,
         'prediction': prediction
     }
-    ref.push(result)
+    ref_sensor.push(result)  # Simpan data sensor di path '/dataSensor'
     st.write("Hasil Prediksi:", prediction)
