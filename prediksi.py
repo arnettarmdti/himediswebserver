@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 import json
 import logging
+import time
 
 # Konfigurasi logging
 logging.basicConfig(level=logging.INFO)
@@ -45,17 +46,25 @@ def predict(ir_value, red_value):
 
 # Fungsi untuk memproses data baru dan memperbarui Firebase
 def process_data(data_id, ir_value, red_value, temp, bpm):
+    # Ambil data yang ada di Firebase
+    current_data = ref.child(data_id).get()
+    
     prediction = predict(ir_value, red_value)
     result = {
         'irValue': ir_value,
         'redValue': red_value,
         'suhu': temp,
         'bpm': bpm,
-        'prediction': prediction
+        'prediction': prediction,
+        'timestamp': time.time()  # Tambahkan timestamp
     }
-    # Menggunakan 'update' untuk memperbarui data pada path yang sudah ada
-    ref.child(data_id).update(result)
-    logging.info(f"Data updated: {result}")
+
+    # Periksa apakah data yang ada sama dengan data baru
+    if current_data != result:
+        ref.child(data_id).update(result)
+        logging.info(f"Data updated: {result}")
+    else:
+        logging.info(f"No change in data for ID: {data_id}")
 
 # Kelas untuk menangani HTTP POST requests
 class RequestHandler(BaseHTTPRequestHandler):
@@ -130,7 +139,8 @@ if st.button("Prediksi"):
         'redValue': red_value,
         'suhu': temp,
         'bpm': bpm,
-        'prediction': prediction
+        'prediction': prediction,
+        'timestamp': time.time()  # Tambahkan timestamp
     }
     # Pastikan data ID unik digunakan di sini
     ref.child('unique_id').update(result)  # Ganti 'unique_id' dengan ID yang sesuai jika perlu
