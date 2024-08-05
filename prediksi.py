@@ -29,7 +29,6 @@ if not firebase_admin._apps:
 
 # Mengakses Realtime Database
 ref_sensor = db.reference('/dataSensor')
-ref_prediction = db.reference('/dataSensor2')
 
 # Fungsi prediksi
 def predict(ir_value, red_value):
@@ -58,8 +57,8 @@ def process_and_update_data():
                     'bpm': bpm,
                     'prediction': prediction
                 }
-                # Update data di path '/dataSensor2' tanpa membuat child baru
-                ref_prediction.child(data_id).set(result)
+                # Update data di path '/dataSensor' dengan hasil prediksi
+                ref_sensor.child(data_id).update(result)
 
 # Jalankan fungsi untuk memproses data dan memperbarui Firebase
 process_and_update_data()
