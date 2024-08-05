@@ -43,22 +43,25 @@ def process_and_update_data():
 
     if sensor_data:
         for data_id, data in sensor_data.items():
-            ir_value = data.get('irValue')
-            red_value = data.get('redValue')
-            temp = data.get('suhu')
-            bpm = data.get('bpm')
+            if isinstance(data, dict):
+                ir_value = data.get('irValue')
+                red_value = data.get('redValue')
+                temp = data.get('suhu')
+                bpm = data.get('bpm')
 
-            if ir_value is not None and red_value is not None:
-                prediction = predict(ir_value, red_value)
-                result = {
-                    'irValue': ir_value,
-                    'redValue': red_value,
-                    'suhu': temp,
-                    'bpm': bpm,
-                    'prediction': prediction
-                }
-                # Update data di path '/dataSensor' dengan hasil prediksi
-                ref_sensor.child(data_id).update(result)
+                if ir_value is not None and red_value is not None:
+                    prediction = predict(ir_value, red_value)
+                    result = {
+                        'irValue': ir_value,
+                        'redValue': red_value,
+                        'suhu': temp,
+                        'bpm': bpm,
+                        'prediction': prediction
+                    }
+                    # Update data di path '/dataSensor' dengan hasil prediksi
+                    ref_sensor.child(data_id).update(result)
+            else:
+                print(f"Unexpected data format for {data_id}: {data}")
 
 # Jalankan fungsi untuk memproses data dan memperbarui Firebase
 process_and_update_data()
