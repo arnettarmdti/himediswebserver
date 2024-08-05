@@ -50,7 +50,7 @@ def process_data(data_id, ir_value, red_value, temp, bpm):
         'bpm': bpm,
         'prediction': prediction
     }
-    ref.child(data_id).update(result)  # Update data dengan hasil prediksi
+    ref.child(data_id).set(result)  # Gunakan set() untuk update dengan PUT
 
 # Kelas untuk menangani HTTP POST requests
 class RequestHandler(BaseHTTPRequestHandler):
@@ -77,7 +77,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             'bpm': bpm,
             'prediction': prediction
         }
-        ref.push(result)
+        ref.push(result)  # Simpan data dengan POST
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
@@ -131,5 +131,5 @@ if st.button("Prediksi"):
         'bpm': bpm,
         'prediction': prediction
     }
-    ref.push(result)
+    ref.push(result)  # Simpan data sensor di path '/dataSensor'
     st.write("Hasil Prediksi:", prediction)
