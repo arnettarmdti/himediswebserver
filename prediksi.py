@@ -41,7 +41,7 @@ def predict(ir_value, red_value):
     return float(prediction)
 
 # Fungsi untuk memproses data baru dan memperbarui Firebase
-def process_data(data_id, ir_value, red_value, temp, bpm):
+def process_data(ir_value, red_value, temp, bpm):
     prediction = predict(ir_value, red_value)
     result = {
         'irValue': ir_value,
@@ -50,7 +50,8 @@ def process_data(data_id, ir_value, red_value, temp, bpm):
         'bpm': bpm,
         'prediction': prediction
     }
-    ref.child(data_id).set(result)  # Gunakan set() untuk update dengan PUT
+    # Menggunakan 'set' untuk memperbarui data pada path yang sudah ada
+    ref.set(result)
 
 # Kelas untuk menangani HTTP POST requests
 class RequestHandler(BaseHTTPRequestHandler):
@@ -69,15 +70,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(b'Invalid input')
             return
 
-        prediction = predict(ir_value, red_value)
-        result = {
-            'irValue': ir_value,
-            'redValue': red_value,
-            'suhu': temp,
-            'bpm': bpm,
-            'prediction': prediction
-        }
-        ref.push(result)  # Simpan data dengan POST
+        process_data(ir_value, red_value, temp, bpm)
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
@@ -88,7 +81,6 @@ class RequestHandler(BaseHTTPRequestHandler):
 def listen_for_data_changes():
     def listener(event):
         if event.event_type == 'put':
-            data_id = event.path.split('/')[-1]
             data = event.data
             if isinstance(data, dict):
                 ir_value = data.get('irValue')
@@ -96,7 +88,7 @@ def listen_for_data_changes():
                 temp = data.get('suhu')
                 bpm = data.get('bpm')
                 if ir_value is not None and red_value is not None:
-                    process_data(data_id, ir_value, red_value, temp, bpm)
+                    process_data(ir_value, red_value, temp, bpm)
     
     ref.listen(listener)
 
@@ -131,5 +123,5 @@ if st.button("Prediksi"):
         'bpm': bpm,
         'prediction': prediction
     }
-    ref.push(result)  # Simpan data sensor di path '/dataSensor'
+    ref.set(result)  # Menggunakan 'set' untuk memperbarui data pada path yang sudah ada
     st.write("Hasil Prediksi:", prediction)
