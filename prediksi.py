@@ -38,30 +38,30 @@ def predict(ir_value, red_value):
 
 # Fungsi untuk memproses data dan memperbarui Firebase
 def process_and_update_data():
-    # Ambil semua data dari path '/dataSensor'
-    sensor_data = ref_sensor.get()
+    try:
+        sensor_data = ref_sensor.get()
+        print("Data from Firebase:", sensor_data)
+        
+        if sensor_data:
+            for data_id, data in sensor_data.items():
+                if isinstance(data, dict):
+                    ir_value = data.get('irValue')
+                    red_value = data.get('redValue')
+                    temp = data.get('suhu')
+                    bpm = data.get('bpm')
 
-    if sensor_data:
-        for data_id, data in sensor_data.items():
-            if isinstance(data, dict):
-                ir_value = data.get('irValue')
-                red_value = data.get('redValue')
-                temp = data.get('suhu')
-                bpm = data.get('bpm')
-
-                if ir_value is not None and red_value is not None:
-                    prediction = predict(ir_value, red_value)
-                    result = {
-                        'irValue': ir_value,
-                        'redValue': red_value,
-                        'suhu': temp,
-                        'bpm': bpm,
-                        'prediction': prediction
-                    }
-                    # Update data di path '/dataSensor' dengan hasil prediksi
-                    ref_sensor.child(data_id).update(result)
-            else:
-                print(f"Unexpected data format for {data_id}: {data}")
-
-# Jalankan fungsi untuk memproses data dan memperbarui Firebase
-process_and_update_data()
+                    if ir_value is not None and red_value is not None:
+                        prediction = predict(ir_value, red_value)
+                        result = {
+                            'irValue': ir_value,
+                            'redValue': red_value,
+                            'suhu': temp,
+                            'bpm': bpm,
+                            'prediction': prediction
+                        }
+                        ref_sensor.child(data_id).update(result)
+                        print(f"Updated {data_id} with prediction")
+                else:
+                    print(f"Unexpected data format for {data_id}: {data}")
+    except Exception as e:
+        print("Error occurred:", str(e))
