@@ -76,6 +76,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(b'Invalid input')
             return
 
+        # Proses data jika ID unik diberikan
         process_data(data_id, ir_value, red_value, temp, bpm)
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
@@ -111,8 +112,9 @@ thread = threading.Thread(target=run_server)
 thread.daemon = True
 thread.start()
 
-# Mulai listener Firebase
-listen_for_data_changes()
+# Mulai listener Firebase hanya jika diperlukan
+if st.session_state.get("start_listener", True):
+    listen_for_data_changes()
 
 # Aplikasi Streamlit
 st.title("Prediksi Menggunakan Model XGBoost dan Firebase")
@@ -132,5 +134,5 @@ if st.button("Prediksi"):
         'prediction': prediction
     }
     # Menggunakan 'set' untuk memperbarui data pada path yang sudah ada
-    ref.set(result)  # Atau gunakan ref.child('unique_id').set(result) jika menggunakan ID unik
+    ref.child('unique_id').set(result)  # Pastikan path sesuai dengan ID unik
     st.write("Hasil Prediksi:", prediction)
