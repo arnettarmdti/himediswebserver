@@ -50,7 +50,7 @@ def process_data(data_id, ir_value, red_value, temp, bpm):
         'bpm': bpm,
         'prediction': prediction
     }
-    ref.child(data_id).update(result)  # Update data dengan hasil prediksi
+    ref.child(data_id).set(result)  # Menggunakan 'set' untuk memperbarui data pada path tertentu
 
 # Kelas untuk menangani HTTP POST requests
 class RequestHandler(BaseHTTPRequestHandler):
@@ -58,12 +58,13 @@ class RequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
         data = json.loads(post_data)
+        data_id = data.get('id')  # Pastikan data mengandung ID unik
         ir_value = data.get('irValue')
         red_value = data.get('redValue')
         temp = data.get('suhu')
         bpm = data.get('bpm')
 
-        if ir_value is None or red_value is None:
+        if data_id is None or ir_value is None or red_value is None:
             self.send_response(400)
             self.end_headers()
             self.wfile.write(b'Invalid input')
@@ -77,7 +78,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             'bpm': bpm,
             'prediction': prediction
         }
-        ref.push(result)
+        ref.child(data_id).set(result)  # Menggunakan 'set' untuk memperbarui data pada path tertentu
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
