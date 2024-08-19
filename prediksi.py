@@ -9,7 +9,7 @@ import threading
 import json
 
 # Memuat model XGBoost yang sudah dilatih
-
+model = joblib.load('xgboost_model3.pkl')
 
 # Mengonfigurasi Firebase
 firebase_creds = {
