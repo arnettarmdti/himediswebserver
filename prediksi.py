@@ -32,7 +32,7 @@ if not firebase_admin._apps:
     })
 
 # Mengakses Realtime Database
-ref = db.reference('/dataSensor')
+# ref = db.reference('/dataSensor')
 
 # Fungsi prediksi
 def predict(ir_value, red_value):
